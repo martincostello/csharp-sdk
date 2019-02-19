@@ -25,6 +25,7 @@ using OptimizelySDK.Notifications;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using OptimizelySDK.Event;
 
 namespace OptimizelySDK
 {
@@ -197,7 +198,8 @@ namespace OptimizelySDK
                 return null;
             }
 
-            SendImpressionEvent(experiment, variation, userId, userAttributes);
+            var impressionEvent = CreateImpressionEvent(experiment, variation.Id, userId, userAttributes);
+            SendImpressionEvent(experiment, variation, userId, userAttributes, impressionEvent);
 
             return variation;
         }
@@ -370,20 +372,32 @@ namespace OptimizelySDK
             if (!Validator.IsFeatureFlagValid(Config, featureFlag))
                 return false;
 
+            LogEvent impressionEvent = null;
             var decision = DecisionService.GetVariationForFeature(featureFlag, userId, userAttributes);
-            if (decision != null) {
-                if (decision.Source == FeatureDecision.DECISION_SOURCE_EXPERIMENT) {
-                    SendImpressionEvent(decision.Experiment, decision.Variation, userId, userAttributes);
-                } else {
+
+            if (decision != null)
+            {
+                if (decision.Source == FeatureDecision.DECISION_SOURCE_EXPERIMENT)
+                {
+                    impressionEvent = CreateImpressionEvent(decision.Experiment, decision.Variation.Id, userId, userAttributes);
+                    SendImpressionEvent(decision.Experiment, decision.Variation, userId, userAttributes, impressionEvent);
+                }
+                else
+                {
                     Logger.Log(LogLevel.INFO, $@"The user ""{userId}"" is not being experimented on feature ""{featureKey}"".");
                 }
-                if (decision.Variation.IsFeatureEnabled) {
+
+                if (decision.Variation.IsFeatureEnabled)
+                {
                     Logger.Log(LogLevel.INFO, $@"Feature flag ""{featureKey}"" is enabled for user ""{userId}"".");
                     return true;
                 }
             }
 
             Logger.Log(LogLevel.INFO, $@"Feature flag ""{featureKey}"" is not enabled for user ""{userId}"".");
+            NotificationCenter.SendNotifications(NotificationCenter.NotificationType.IsFeatureEnabled, featureKey, userId,
+                userAttributes, decision?.Variation.FeatureEnabled, impressionEvent);
+
             return false;
         }
 
@@ -453,6 +467,8 @@ namespace OptimizelySDK
                     $@"User ""{userId}"" is not in any variation for feature flag ""{featureFlag.Key}"", returning default value ""{variableValue}"".");
             }
 
+            NotificationCenter.SendNotifications(NotificationCenter.NotificationType.GetFeatureVariable, featureKey, variableKey, userId,
+                userAttributes, decision?.Variation.FeatureEnabled, variableValue);
             return variableValue;
         }
 
@@ -546,19 +562,32 @@ namespace OptimizelySDK
         /// Sends impression event.
         /// </summary>
         /// <param name="experiment">The experiment</param>
-        /// <param name="variationId">The variation entity</param>
+        /// <param name="variationId">The variation Id</param>
         /// <param name="userId">The user ID</param>
         /// <param name="userAttributes">The user's attributes</param>
+        private LogEvent CreateImpressionEvent(Experiment experiment, string variationId, string userId, UserAttributes userAttributes)
+        {
+            var impressionEvent = EventBuilder.CreateImpressionEvent(Config, experiment, variationId, userId, userAttributes);
+            Logger.Log(LogLevel.INFO, string.Format("Activating user {0} in experiment {1}.", userId, experiment.Key));
+            Logger.Log(LogLevel.DEBUG, string.Format("Dispatching impression event to URL {0} with params {1}.",
+                impressionEvent.Url, impressionEvent.GetParamsAsJson()));
+
+            return impressionEvent;
+        }
+
+        /// <summary>
+        /// Sends impression event.
+        /// </summary>
+        /// <param name="experiment">The experiment</param>
+        /// <param name="variation">The variation entity</param>
+        /// <param name="userId">The user ID</param>
+        /// <param name="userAttributes">The user's attributes</param>
+        /// <param name="impressionEvent">The impression event</param>
         private void SendImpressionEvent(Experiment experiment, Variation variation, string userId, 
-        UserAttributes userAttributes)
+        UserAttributes userAttributes, LogEvent impressionEvent)
         {
             if (experiment.IsExperimentRunning)
             {
-                var impressionEvent = EventBuilder.CreateImpressionEvent(Config, experiment, variation.Id, userId, userAttributes);
-                Logger.Log(LogLevel.INFO, string.Format("Activating user {0} in experiment {1}.", userId, experiment.Key));
-                Logger.Log(LogLevel.DEBUG, string.Format("Dispatching impression event to URL {0} with params {1}.",
-                    impressionEvent.Url, impressionEvent.GetParamsAsJson()));
-
                 try
                 {
                     EventDispatcher.DispatchEvent(impressionEvent);

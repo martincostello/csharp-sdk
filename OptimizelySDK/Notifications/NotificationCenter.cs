@@ -34,7 +34,9 @@ namespace OptimizelySDK.Notifications
         public enum NotificationType
         {
             Activate, // Activate called.
-            Track
+            Track,
+            IsFeatureEnabled,
+            GetFeatureVariable
         };
 
         /// <summary>
@@ -58,6 +60,30 @@ namespace OptimizelySDK.Notifications
         /// <param name="logEvent">The conversion event</param>
         public delegate void TrackCallback(string eventKey, string userId, UserAttributes userAttributes, EventTags eventTags,
             LogEvent logEvent);
+
+        /// <summary>
+        /// Delegate for isFeatureEnabled notifcations.
+        /// </summary>
+        /// <param name="featureKey">The feature key</param>
+        /// <param name="userId">The user identifier</param>
+        /// <param name="userAttributes">Associative array of attributes for the user</param>
+        /// <param name="featureEnabled">Boolean value that represents if the feature is enabled or not</param>
+        /// <param name="logEvent">The impression event</param>
+        public delegate void IsFeatureEnabledCallback(string featureKey, string userId, UserAttributes userAttributes, bool featureEnabled,
+            LogEvent logEvent);
+
+        /// <summary>
+        /// Delegate for GetFeatureVariable* notifcations.
+        /// </summary>
+        /// <param name="featureKey">The feature key</param>
+        /// <param name="variableKey">The variable key</param>
+        /// <param name="userId">The user identifier</param>
+        /// <param name="userAttributes">Associative array of attributes for the user</param>
+        /// <param name="featureEnabled">Associative array of attributes for the user</param>
+        /// <param name="variableType">Type of feaure variable</param>
+        /// <param name="varibaleValue">Value of feature variable</param>
+        public delegate void GetFeatureVariableCallback(string featureKey, string variableKey, string userId, UserAttributes userAttributes,
+            bool featureEnabled, FeatureVariable.VariableType variableType, string varibaleValue);
 
         private ILogger Logger;
 
@@ -129,6 +155,35 @@ namespace OptimizelySDK.Notifications
             return AddNotification(notificationType, (object)trackCallback);
         }
 
+        /// <summary>
+        /// Add a notification callback of isFeatureEnabled type to the notification center.
+        /// </summary>
+        /// <param name="notificationType">Notification type</param>
+        /// <param name="isFeatureEnabledCallback">Callback function to call when event gets triggered</param>
+        /// <returns>int | 0 for invalid notification type, -1 for adding existing notification
+        /// or the notification id of newly added notification.</returns>
+        public int AddNotification(NotificationType notificationType, IsFeatureEnabledCallback isFeatureEnabledCallback)
+        {
+            if (!IsNotificationTypeValid(notificationType, NotificationType.IsFeatureEnabled))
+                return 0;
+
+            return AddNotification(notificationType, (object)isFeatureEnabledCallback);
+        }
+
+        /// <summary>
+        /// Add a notification callback of getFeatureVariable type to the notification center.
+        /// </summary>
+        /// <param name="notificationType">Notification type</param>
+        /// <param name="getFeatureVariableCallback">Callback function to call when event gets triggered</param>
+        /// <returns>int | 0 for invalid notification type, -1 for adding existing notification
+        /// or the notification id of newly added notification.</returns>
+        public int AddNotification(NotificationType notificationType, GetFeatureVariableCallback getFeatureVariableCallback)
+        {
+            if (!IsNotificationTypeValid(notificationType, NotificationType.GetFeatureVariable))
+                return 0;
+
+            return AddNotification(notificationType, (object)getFeatureVariableCallback);
+        }
 
         /// <summary>
         /// Validate notification type.
