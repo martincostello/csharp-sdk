@@ -33,11 +33,11 @@ main() {
   sn -R "../OptimizelySDK/bin/Release/OptimizelySDK.dll" "../keypair.snk"
   sn -R "../OptimizelySDK.Net35/bin/Release/OptimizelySDK.Net35.dll" "../keypair.snk"
   sn -R "../OptimizelySDK.Net40/bin/Release/OptimizelySDK.Net40.dll" "../keypair.snk"
-  sn -R "../OptimizelySDK.NetStandard16/bin/Release/netstandard1.6/OptimizelySDK.NetStandard16.dll" "../keypair.snk"
+  sn -R "../OptimizelySDK.NetStandard20/bin/Release/netstandard2.0/OptimizelySDK.NetStandard20.dll" "../keypair.snk"
   sn -v "../OptimizelySDK/bin/Release/OptimizelySDK.dll"
   sn -v "../OptimizelySDK.Net35/bin/Release/OptimizelySDK.Net35.dll"
   sn -v "../OptimizelySDK.Net40/bin/Release/OptimizelySDK.Net40.dll"
-  sn -v "../OptimizelySDK.NetStandard16/bin/Release/netstandard1.6/OptimizelySDK.NetStandard16.dll"
+  sn -v "../OptimizelySDK.NetStandard20/bin/Release/netstandard2.0/OptimizelySDK.NetStandard20.dll"
   cleanup
 }
 
